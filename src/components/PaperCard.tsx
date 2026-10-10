@@ -190,13 +190,13 @@ export const PaperCard: React.FC<PaperCardProps> = ({
 
         {onSelectForAI && (
           <button
-            className="btn btn-ghost"
-            style={{ fontSize: "0.8rem", color: "#a5b4fc" }}
+            className={styles.summarizeBtn}
             onClick={() => onSelectForAI(paper)}
-            title="Inspect with AI Assistant"
+            id={`btn-summarize-${paper.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`}
+            title="Summarize paper content with Gemini LLM"
           >
             <Sparkles size={14} />
-            <span>AI Insights</span>
+            <span>AI Summary</span>
           </button>
         )}
       </div>

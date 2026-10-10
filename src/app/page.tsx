@@ -23,7 +23,10 @@ import {
   Moon,
   Check,
   Bookmark,
+  Key,
 } from "lucide-react";
+import { SummaryModal } from "@/components/SummaryModal";
+import { ApiKeyModal } from "@/components/ApiKeyModal";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"search" | "library">("search");
@@ -52,6 +55,16 @@ export default function Home() {
 
   // Theme State
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  // AI Summary & Settings State
+  const [summaryPaper, setSummaryPaper] = useState<Paper | null>(null);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  const handleOpenSummary = (paper: Paper) => {
+    setSummaryPaper(paper);
+    setIsSummaryModalOpen(true);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("research_theme") as "dark" | "light" | null;
@@ -330,6 +343,16 @@ export default function Home() {
           </button>
 
           <button
+            className={styles.themeToggleBtn}
+            onClick={() => setIsApiKeyModalOpen(true)}
+            id="btn-ai-settings"
+            title="Gemini AI Settings"
+          >
+            <Key size={15} color="#818cf8" />
+            <span>AI Key</span>
+          </button>
+
+          <button
             className="btn btn-primary"
             onClick={() => setIsUploadModalOpen(true)}
             id="btn-open-upload-modal"
@@ -516,6 +539,7 @@ export default function Home() {
                     key={paper.id}
                     paper={paper}
                     onToggleSave={handleToggleSave}
+                    onSelectForAI={handleOpenSummary}
                     showCheckbox={true}
                     isSelected={selectedPaperIds.has(paper.id)}
                     onToggleSelect={handleToggleSelect}
@@ -631,6 +655,7 @@ export default function Home() {
                   key={paper.id}
                   paper={paper}
                   onToggleSave={handleToggleSave}
+                  onSelectForAI={handleOpenSummary}
                 />
               ))}
             </section>
@@ -664,6 +689,21 @@ export default function Home() {
             >
               <span>{isBatchSaving ? "Saving..." : `Save to Library (${selectedPaperIds.size})`}</span>
             </button>
+            {selectedPaperIds.size === 1 && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  const targetId = Array.from(selectedPaperIds)[0];
+                  const targetPaper = results.find((p) => p.id === targetId);
+                  if (targetPaper) handleOpenSummary(targetPaper);
+                }}
+                id="btn-floating-summarize-selected"
+                style={{ padding: "0.45rem 0.95rem", fontSize: "0.85rem", color: "#a5b4fc" }}
+              >
+                <Sparkles size={14} />
+                <span>Summarize</span>
+              </button>
+            )}
             <button
               className="btn btn-secondary"
               onClick={() => setSelectedPaperIds(new Set())}
@@ -674,6 +714,20 @@ export default function Home() {
           </div>
         </aside>
       )}
+
+      {/* AI Summary Modal Drawer */}
+      <SummaryModal
+        paper={summaryPaper}
+        isOpen={isSummaryModalOpen}
+        onClose={() => setIsSummaryModalOpen(false)}
+        onOpenApiKeySettings={() => setIsApiKeyModalOpen(true)}
+      />
+
+      {/* Gemini API Key Settings Modal */}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+      />
 
       {/* Floating Toast Notification */}
       {toast && (
