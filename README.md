@@ -39,7 +39,25 @@ A modern, desktop-grade web application designed to help researchers search lite
   - Extracts the **Paper Title**, **Authors**, **Publication Year**, and **Abstract**.
 - **Unified Rendering**: Uploaded papers are stored in `data/uploads/` and render seamlessly in the library alongside searched papers with an "Uploaded PDF" badge and a direct "Read PDF" viewer.
 
-### 4. High-Contrast Dark Mode & Bright Mode
+### 4. Summarize Papers with an LLM (Google Gemini Integration)
+- **Grounded in Actual Paper Content**:
+  - Automatically fetches and parses full-text PDFs on-the-fly for online open-access papers (such as arXiv preprints) and locally uploaded PDFs via `pdf-parse` v2.
+  - Automatically falls back to verified full abstracts for paywalled/closed publications.
+  - Grounding badge indicates whether full-text manuscript or published abstract was analyzed.
+- **Academic Reviewer Prompt Engineering**:
+  - Structured output tailored for researchers:
+    1. **Executive Summary & Core Contribution**
+    2. **Problem Formulation & Research Motivation**
+    3. **Methodology & Technical Approach**
+    4. **Key Findings & Empirical Results**
+    5. **Critical Limitations & Open Challenges**
+- **Real-Time Streaming Generation**:
+  - Fast streaming token generation powered by `gemini-3.5-flash-lite` (1M token context window).
+  - Responsive slide-over drawer with copy button, regenerate action, and markdown formatting.
+- **Persistent SQLite Caching**:
+  - Summaries are automatically cached in SQLite (`paper_summaries` table) by paper ID for instant offline review without redundant API calls.
+
+### 5. High-Contrast Dark Mode & Bright Mode
 - **Low-Brightness Readability**: Tuned dark theme contrast tokens specifically optimized for laptops running at low display brightness (pure white text `#ffffff`, high-contrast slate-100 body `#e2e8f0`, distinct card borders).
 - **Bright Mode**: Soft slate-white background with high-contrast slate-900 typography.
 - **Theme Switcher**: Instant Sun/Moon toggle in the header; persists user preference in `localStorage`.
@@ -49,24 +67,24 @@ A modern, desktop-grade web application designed to help researchers search lite
 ## Architecture & Tech Stack
 
 ```
-+-------------------------------------------------------------------------+
-|                           Client Tier (Browser)                         |
-|  React 19, Vanilla CSS Modules, High-Contrast Dark & Bright Mode Theme  |
-+-------------------------------------------------------------------------+
-                                    |
-                                    v
-+-------------------------------------------------------------------------+
-|                       Server Tier (Next.js 16)                          |
-|  /api/search        /api/library          /api/upload      /api/uploads |
-+-------------------------------------------------------------------------+
-         |                       |                       |
-         v                       v                       v
-+------------------+   +--------------------+   +-------------------------+
-|  Academic APIs   |   | SQLite Database    |   | Local PDF Storage       |
-|  - OpenAlex      |   | - data/library.db  |   | - data/uploads/*.pdf    |
-|  - Crossref      |   | - WAL mode         |   | - pdf-parse v2 pipeline |
-|  - Europe PMC    |   | - better-sqlite3   |   +-------------------------+
-|  - arXiv         |   +--------------------+
++-----------------------------------------------------------------------------------+
+|                              Client Tier (Browser)                                |
+|  React 19, Vanilla CSS Modules, High-Contrast Dark & Bright Mode, AI Summary Drawer |
++-----------------------------------------------------------------------------------+
+                                        |
+                                        v
++-----------------------------------------------------------------------------------+
+|                            Server Tier (Next.js 16)                               |
+|  /api/search     /api/library     /api/upload     /api/ai/summarize     /api/ai/status|
++-----------------------------------------------------------------------------------+
+         |                  |                 |                      |
+         v                  v                 v                      v
++------------------+ +-----------------+ +---------------------+ +--------------------+
+|  Academic APIs   | | SQLite Database | | Local PDF Storage   | | Google Gemini API  |
+|  - OpenAlex      | | - library.db    | | - data/uploads/*.pdf| | - 3.5-flash-lite   |
+|  - Crossref      | | - WAL mode      | | - pdf-parse v2      | | - Real-time SSE    |
+|  - Europe PMC    | | - better-sqlite3| +---------------------+ | - 1M token context |
+|  - arXiv         | +-----------------+                         +--------------------+
 +------------------+
 ```
 
@@ -139,7 +157,16 @@ cd research_assistant
 npm install
 ```
 
-### 2. Run the Development Server
+### 2. Configure Gemini API Key (Optional / Zero-Config)
+
+You can either configure your key in `.env.local` or directly in the browser UI via the **"AI Key"** settings button:
+
+```bash
+# Create .env.local in the root directory (already git-ignored)
+echo 'GEMINI_API_KEY="your-google-gemini-api-key"' > .env.local
+```
+
+### 3. Run the Development Server
 
 ```bash
 npm run dev
@@ -147,7 +174,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Build & Run for Production
+### 4. Build & Run for Production
 
 ```bash
 # Build the optimized production application
@@ -169,6 +196,9 @@ npm start
 | `DELETE` | `/api/library?id={paperId}` | Deletes a paper from the local library database. |
 | `POST` | `/api/upload` | Accepts a multipart form upload (`file: PDF`) and extracts title, authors, year, and abstract. |
 | `GET` | `/api/uploads/{filename}` | Streams the stored PDF binary for inline reading. |
+| `GET` | `/api/ai/status` | Reports whether Gemini API key is configured. |
+| `GET` | `/api/ai/summarize?paperId={id}` | Retrieves cached summary from SQLite. |
+| `POST` | `/api/ai/summarize` | Resolves full paper content and streams NDJSON summary generated by Gemini. |
 
 ---
 

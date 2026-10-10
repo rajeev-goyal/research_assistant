@@ -81,18 +81,22 @@ gantt
    - Automated metadata extraction pipeline (Title, Authors, Publication Year, Abstract).
    - Saved binary to `data/uploads/` and recorded metadata into SQLite `papers` table.
 
-4. **Phase 4: Summarize Papers with an LLM** (Current Focus)
-   - **Selection**: User selects any paper from search results or the local library.
-   - **Content Extraction Pipeline**:
-     - For uploaded PDFs: read full paper text from `data/uploads/${fileId}.pdf`.
-     - For online papers: fetch and parse PDF text if `pdfUrl` is available, or compile rich abstract + section contents.
-   - **LLM Summary Generation**:
-     - Prompt LLM with full paper text content (not just title/metadata).
-     - Generate structured summaries: Objective & Problem, Methodology & Architecture, Key Findings, Limitations.
-     - Real-time streaming response with markdown formatting.
-   - **Persistence**: Store generated summaries in the SQLite database so they remain accessible offline.
+4. **Phase 4: Summarize Papers with an LLM** (Completed)
+   - **Multi-Source Content Extraction**:
+     - Local uploaded PDFs read from `data/uploads/` and parsed with `pdf-parse` v2.
+     - Remote PDFs fetched and parsed on-the-fly via `pdfUrl` (e.g. arXiv preprints, open-access papers).
+     - Robust fallback to verified abstracts and metadata for closed publications.
+   - **Google Gemini Integration**:
+     - Real-time streaming generation powered by `gemini-3.5-flash-lite` with 1M token context.
+     - Structured academic synthesis: Executive Summary & Contribution, Problem Formulation & Motivation, Methodology & Architecture, Key Empirical Results, Stated Limitations.
+     - Zero-config `.env.local` server detection + client-side API Key settings modal.
+   - **Persistent SQLite Caching**:
+     - Summaries stored in SQLite `paper_summaries` table for instant retrieval and offline viewing.
+   - **Interactive UI**:
+     - Slide-over drawer with high-contrast Dark & Bright mode support.
+     - Grounding badges (Full-text PDF extracted vs Abstract & Metadata), Copy Summary button, and Regenerate button.
 
-5. **Phase 5: Interactive Paper Q&A & Reading Tools**
+5. **Phase 5: Interactive Paper Q&A & Reading Tools** (Next Focus)
    - Conversational chat interface to ask questions about specific paper sections, tables, or equations.
    - Highlight unfamiliar terms to get beginner-friendly explanations.
 
@@ -108,8 +112,8 @@ gantt
 flowchart TD
     subgraph Client ["Client Tier (Browser)"]
         SelectPaper["Select Paper<br/>(Search Results or My Library)"]
-        TriggerSummary["Click 'Summarize Paper' / 'AI Insights'"]
-        SummaryModal["Summary View / Drawer<br/>• Markdown Render<br/>• Copy / Save Notes"]
+        TriggerSummary["Click 'AI Summary' Button"]
+        SummaryModal["Summary Drawer<br/>• Streaming Markdown<br/>• Copy / Settings / Cache"]
         SelectPaper --> TriggerSummary --> SummaryModal
     end
 
@@ -119,10 +123,10 @@ flowchart TD
         RemotePDFParser["Fetch Remote PDF / E-Print<br/>(Extract Text Stream)"]
         AbstractFallback["Comprehensive Abstract & Text Content"]
         PromptAssembler["Academic Prompt Assembler<br/>(System instructions + Paper Body Text)"]
-        LLMClient["LLM Streaming Client<br/>(Google Gemini / OpenAI API)"]
+        LLMClient["Gemini Streaming Client<br/>(gemini-3.5-flash-lite via SSE)"]
         CacheDB[("Store in SQLite<br/>data/library.db")]
 
-        SummaryModal -->|POST paperId, focus| PaperResolver
+        SummaryModal -->|POST paperId| PaperResolver
         PaperResolver -->|Uploaded PDF| LocalPDFParser
         PaperResolver -->|Remote PDF URL| RemotePDFParser
         PaperResolver -->|Text / Abstract| AbstractFallback
@@ -130,7 +134,7 @@ flowchart TD
         RemotePDFParser --> PromptAssembler
         AbstractFallback --> PromptAssembler
         PromptAssembler --> LLMClient
-        LLMClient -->|Stream Markdown Chunks| SummaryModal
+        LLMClient -->|Stream NDJSON Chunks| SummaryModal
         LLMClient -->|Persist Summary| CacheDB
     end
 ```
@@ -139,4 +143,4 @@ flowchart TD
 
 ## 5. Immediate Next Step
 
-Proceed with **Phase 4: Summarize Papers with an LLM**.
+Proceed with **Phase 5: Interactive Paper Q&A & Reading Tools**.
