@@ -96,13 +96,16 @@ gantt
      - Slide-over drawer with high-contrast Dark & Bright mode support.
      - Grounding badges (Full-text PDF extracted vs Abstract & Metadata), Copy Summary button, and Regenerate button.
 
-5. **Phase 5: Interactive Paper Q&A & Reading Tools** (Next Focus)
-   - Conversational chat interface to ask questions about specific paper sections, tables, or equations.
-   - Highlight unfamiliar terms to get beginner-friendly explanations.
+5. **Phase 5: Interactive Paper Q&A & Conversational Research Assistant** (Completed)
+   - **Grounded Manuscript Q&A**: Real-time conversational question answering powered by `gemini-3.5-flash-lite`, grounded in full PDF text streams or verified abstracts with section & metric citations.
+   - **Handout-Aligned Suggested Prompt Chips**: Clickable chips for the 5 assignment questions (*"What problem does this paper address?"*, *"What is the main idea?"*, *"What datasets are used?"*, *"What are the major limitations?"*, *"Compare with baselines"*).
+   - **Multi-Turn Context & Streaming**: Streaming NDJSON responses, Markdown formatting, LaTeX complexity notation, and turn-based follow-up questions.
+   - **SQLite Persistence**: Stores chat history in `chat_messages` table across browser refreshes and server restarts, with one-click clear chat capability.
+   - **Card & Drawer Integration**: Unified AI Paper Workspace drawer with dual tabs (Summary & Synthesis + Ask Questions), plus direct `Ask AI` button on every paper card.
 
-6. **Phase 6: Hardening & End-to-End Validation**
-   - Multi-format PDF stress testing (2-column IEEE, single-column Nature, large preprints).
-   - Responsive polish and performance audit.
+6. **Phase 6: Hardening, Polish & Delivery** (Current Focus)
+   - End-to-end integration testing across search results, library persistence, PDF upload, and Gemini AI interactions.
+   - Documentation integrity, README completeness, and git tree clean state.
 
 ---
 
