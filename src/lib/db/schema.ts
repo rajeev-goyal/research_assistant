@@ -53,8 +53,20 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS paper_summaries (
+    paper_id TEXT PRIMARY KEY,
+    title TEXT,
+    summary TEXT NOT NULL,
+    model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite',
+    source_type TEXT NOT NULL DEFAULT 'full_pdf',
+    char_count INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_papers_created_at ON papers(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_papers_status ON papers(read_status);
 CREATE INDEX IF NOT EXISTS idx_paper_authors_paper ON paper_authors(paper_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_paper ON chat_messages(paper_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_paper_summaries_updated ON paper_summaries(updated_at DESC);
 `;

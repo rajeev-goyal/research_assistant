@@ -207,3 +207,71 @@ export function getLibraryPapers(): LibraryPaper[] {
     notesCount: p.notesCount || 0,
   }));
 }
+
+export interface PaperSummaryRecord {
+  paperId: string;
+  title?: string;
+  summary: string;
+  model: string;
+  sourceType: string;
+  charCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getPaperSummary(paperId: string): PaperSummaryRecord | null {
+  const db = getDatabase();
+  const row = db.prepare(`
+    SELECT paper_id, title, summary, model, source_type, char_count, created_at, updated_at
+    FROM paper_summaries
+    WHERE paper_id = ?
+  `).get(paperId) as any;
+
+  if (!row) return null;
+  return {
+    paperId: row.paper_id,
+    title: row.title || undefined,
+    summary: row.summary,
+    model: row.model,
+    sourceType: row.source_type,
+    charCount: row.char_count || 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function savePaperSummary(params: {
+  paperId: string;
+  title?: string;
+  summary: string;
+  model?: string;
+  sourceType?: string;
+  charCount?: number;
+}): void {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    INSERT INTO paper_summaries (paper_id, title, summary, model, source_type, char_count, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(paper_id) DO UPDATE SET
+      title = excluded.title,
+      summary = excluded.summary,
+      model = excluded.model,
+      source_type = excluded.source_type,
+      char_count = excluded.char_count,
+      updated_at = datetime('now')
+  `);
+  stmt.run(
+    params.paperId,
+    params.title || null,
+    params.summary,
+    params.model || "gemini-3.5-flash-lite",
+    params.sourceType || "full_pdf",
+    params.charCount || params.summary.length
+  );
+}
+
+export function deletePaperSummary(paperId: string): void {
+  const db = getDatabase();
+  db.prepare(`DELETE FROM paper_summaries WHERE paper_id = ?`).run(paperId);
+}
+
