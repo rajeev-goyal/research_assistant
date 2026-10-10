@@ -236,7 +236,12 @@ async function searchCrossrefExactTitle(rawQuery: string): Promise<Paper | null>
               publicationDate: oaWork.publication_date,
               venue: oaWork.primary_location?.source?.display_name || item["container-title"]?.[0],
               url: oaWork.doi || `https://doi.org/${item.DOI}`,
-              pdfUrl: oaWork.open_access?.oa_url || undefined,
+              pdfUrl:
+                oaWork.best_oa_location?.pdf_url ||
+                oaWork.locations?.find((l: any) => l.pdf_url)?.pdf_url ||
+                (oaWork.open_access?.oa_url && oaWork.open_access.oa_url.toLowerCase().endsWith(".pdf")
+                  ? oaWork.open_access.oa_url
+                  : undefined),
               source: "semanticscholar",
               citationCount: oaWork.cited_by_count || 0,
               isSaved: false,
@@ -354,9 +359,12 @@ export async function searchOpenAlex(params: UnifiedSearchParams): Promise<Searc
       `https://openalex.org/${rawId}`;
 
     const pdfUrl =
-      item.open_access?.oa_url ||
+      item.best_oa_location?.pdf_url ||
+      item.locations?.find((l: any) => l.pdf_url)?.pdf_url ||
       item.primary_location?.pdf_url ||
-      undefined;
+      (item.open_access?.oa_url && item.open_access.oa_url.toLowerCase().endsWith(".pdf")
+        ? item.open_access.oa_url
+        : undefined);
 
     const paper: Paper = {
       id,

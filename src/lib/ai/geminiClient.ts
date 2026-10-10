@@ -162,12 +162,14 @@ export async function* streamGeminiChatAnswer(
 ): AsyncGenerator<string, void, unknown> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  const sourceDesc =
-    params.sourceType === "full_pdf"
-      ? "extracted full-text manuscript of the paper"
-      : "published abstract and metadata of the paper";
+  const isFullPdf = params.sourceType === "full_pdf";
+  const sourceDesc = isFullPdf
+    ? "extracted full-text manuscript of the paper"
+    : "official abstract and published metadata of the paper";
 
   const systemInstructionText = `You are a distinguished academic research assistant answering questions about the paper "${params.paperTitle}".
+
+Grounding Level: ${isFullPdf ? "Full-text PDF manuscript extracted" : "Published abstract and metadata only (full PDF was not open-access or not uploaded)"}
 
 The following is the ${sourceDesc}:
 ----------------------------------------
@@ -175,9 +177,9 @@ ${params.contentText.slice(0, 120000)}
 ----------------------------------------
 
 Instructions:
-1. Answer the user's question directly, accurately, and objectively based strictly on the text provided above.
-2. When referencing methodology, numbers, datasets, or baselines, cite the specific sections or findings stated in the paper.
-3. If the paper does not mention or evaluate the topic of the question, explicitly state that it is not covered in the text instead of guessing.
+1. Answer the user's question directly, accurately, and objectively based on the text provided above.
+2. When referencing methodology, numbers, datasets, or baselines, cite the specific sections or findings stated in the text.
+3. If the paper does not mention or evaluate the topic (e.g. if the work is a software framework release without training datasets, or if only the abstract is available and specific experimental details like dataset names or benchmark tables are missing from the abstract), state this clearly and objectively. If only the abstract was analyzed, inform the user that they can upload the full PDF paper via the "Upload PDF" button in the application to analyze the entire manuscript.
 4. Format your answer with clean Markdown (bold text, bullet points, headers if helpful).`;
 
   const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];

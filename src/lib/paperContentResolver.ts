@@ -97,30 +97,75 @@ export async function resolvePaperContent(paper: Partial<Paper> & { id: string; 
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        const arrayBuf = await response.arrayBuffer();
-        if (arrayBuf.byteLength > 2000) {
-          const parser = new PDFParse({ data: Buffer.from(arrayBuf) });
-          const textResult = await parser.getText();
-          const cleaned = cleanExtractedText(textResult?.text || "");
+        const contentType = response.headers.get("content-type") || "";
 
-          if (cleaned.length >= 400) {
-            let numPages = 1;
-            try {
-              const info = (await parser.getInfo()) as any;
-              numPages = info?.total_pages || info?.numPages || 1;
-            } catch {
-              // ignore
+        if (contentType.includes("text/html")) {
+          // Attempt to extract direct PDF URL from meta tags or hrefs
+          try {
+            const htmlText = await response.text();
+            const pdfMatch =
+              htmlText.match(/<meta[^>]+name=["']citation_pdf_url["'][^>]+content=["']([^"']+)["']/i) ||
+              htmlText.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']citation_pdf_url["']/i) ||
+              htmlText.match(/href=["'](https?:\/\/[^"']+\.pdf)["']/i);
+
+            if (pdfMatch && pdfMatch[1]) {
+              const redirectPdfUrl = pdfMatch[1];
+              const pdfRes = await fetch(redirectPdfUrl, {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (compatible; ResearchAssistant/1.0; +https://github.com/academic-assistant)",
+                  Accept: "application/pdf,*/*",
+                },
+              });
+              if (pdfRes.ok) {
+                const arrayBuf = await pdfRes.arrayBuffer();
+                if (arrayBuf.byteLength > 2000) {
+                  const parser = new PDFParse({ data: Buffer.from(arrayBuf) });
+                  const textResult = await parser.getText();
+                  const cleaned = cleanExtractedText(textResult?.text || "");
+
+                  if (cleaned.length >= 400) {
+                    return {
+                      paperId: paper.id,
+                      title: paper.title,
+                      contentText: cleaned,
+                      sourceType: "full_pdf",
+                      charCount: cleaned.length,
+                      metadataSnippet,
+                    };
+                  }
+                }
+              }
             }
+          } catch {
+            // ignore HTML parse error
+          }
+        } else {
+          // Direct binary PDF stream
+          const arrayBuf = await response.arrayBuffer();
+          if (arrayBuf.byteLength > 2000) {
+            const parser = new PDFParse({ data: Buffer.from(arrayBuf) });
+            const textResult = await parser.getText();
+            const cleaned = cleanExtractedText(textResult?.text || "");
 
-            return {
-              paperId: paper.id,
-              title: paper.title,
-              contentText: cleaned,
-              sourceType: "full_pdf",
-              charCount: cleaned.length,
-              pageCount: numPages,
-              metadataSnippet,
-            };
+            if (cleaned.length >= 400) {
+              let numPages = 1;
+              try {
+                const info = (await parser.getInfo()) as any;
+                numPages = info?.total_pages || info?.numPages || 1;
+              } catch {
+                // ignore
+              }
+
+              return {
+                paperId: paper.id,
+                title: paper.title,
+                contentText: cleaned,
+                sourceType: "full_pdf",
+                charCount: cleaned.length,
+                pageCount: numPages,
+                metadataSnippet,
+              };
+            }
           }
         }
       }
