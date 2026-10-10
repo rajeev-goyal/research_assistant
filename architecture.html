@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Research Assistant — Architecture Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card-bg: rgba(22, 27, 34, 0.85);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      max-width: 900px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #a5b4fc, #6366f1, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .diagram-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      max-width: 1200px;
+      width: 100%;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0b0f17',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#6366f1',
+        lineColor: '#818cf8',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b'
+      }
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>AI Research Assistant Architecture</h1>
+    <p>Next.js (Node.js runtime) + SQLite (better-sqlite3) + arXiv API + AI Engine</p>
+  </header>
+
+  <div class="diagram-container">
+    <div class="mermaid">
+flowchart TB
+    subgraph Browser ["🖥️ Client / Browser Tier"]
+        subgraph UI ["User Interface (React + Vanilla CSS)"]
+            SearchTab["🔍 Paper Search View<br/>(Query bar, filters, paper cards)"]
+            LibTab["📚 My Library View<br/>(Saved papers, status, tags)"]
+            AIDrawer["🤖 AI Assistant Panel<br/>(TL;DR summaries, interactive Q&A)"]
+        end
+    end
+
+    subgraph Runtime ["⚙️ Next.js Application (Running on Node.js)"]
+        subgraph APIRoutes ["Server Route Handlers (app/api/*)"]
+            SearchAPI["/api/search<br/>• Query formatting<br/>• XML-to-JSON parsing<br/>• LaTeX math cleaner"]
+            LibAPI["/api/library<br/>• CRUD operations<br/>• Tagging & reading status<br/>• Notes persistence"]
+            AIAPI["/api/ai/*<br/>• /summarize (structured TL;DR)<br/>• /chat (streaming Q&A context)"]
+        end
+
+        subgraph CoreEngine ["Backend Drivers & Utilities"]
+            DBClient["SQLite Driver (better-sqlite3)<br/>• ACID Transactions<br/>• WAL Mode"]
+            Parser["arXiv XML Parser (fast-xml-parser)"]
+        end
+    end
+
+    subgraph Storage ["💾 Local Storage Tier"]
+        DB[("SQLite Database<br/>(data/library.db)<br/>• papers<br/>• authors<br/>• tags<br/>• notes<br/>• chat_history")]
+    end
+
+    subgraph ExternalServices ["🌐 External Cloud Services"]
+        ArXiv["arXiv Public API<br/>(Atom/XML over HTTP)"]
+        S2["Semantic Scholar API<br/>(Citations & open-access links)"]
+        LLM["AI Model API<br/>(Gemini / OpenAI API)"]
+    end
+
+    %% Client to Server Route communication
+    SearchTab -->|"GET /api/search?q=..."| SearchAPI
+    LibTab -->|"GET / POST / DELETE /api/library"| LibAPI
+    AIDrawer -->|"POST /api/ai/summarize & /chat"| AIAPI
+
+    %% Server Internal Wiring
+    SearchAPI --> Parser
+    LibAPI --> DBClient
+    DBClient <-->|"Read / Write Local File"| DB
+
+    %% External Communications
+    Parser <-->|"Fetch Raw Papers XML"| ArXiv
+    SearchAPI <-->|"Fetch Citation Metadata"| S2
+    AIAPI <-->|"Prompt & Stream Responses"| LLM
+    </div>
+  </div>
+</body>
+</html>
