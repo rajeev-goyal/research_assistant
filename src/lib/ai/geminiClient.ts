@@ -143,3 +143,136 @@ export async function* streamGeminiSummary(
     }
   }
 }
+
+export interface ChatQuestionRequestParams {
+  paperTitle: string;
+  contentText: string;
+  sourceType: "full_pdf" | "abstract" | "partial";
+  history?: { role: "user" | "assistant"; content: string }[];
+  question: string;
+}
+
+/**
+ * Streams conversational question answering grounded on paper content
+ */
+export async function* streamGeminiChatAnswer(
+  params: ChatQuestionRequestParams,
+  apiKey: string,
+  model = "gemini-3.5-flash-lite"
+): AsyncGenerator<string, void, unknown> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+  const sourceDesc =
+    params.sourceType === "full_pdf"
+      ? "extracted full-text manuscript of the paper"
+      : "published abstract and metadata of the paper";
+
+  const systemInstructionText = `You are a distinguished academic research assistant answering questions about the paper "${params.paperTitle}".
+
+The following is the ${sourceDesc}:
+----------------------------------------
+${params.contentText.slice(0, 120000)}
+----------------------------------------
+
+Instructions:
+1. Answer the user's question directly, accurately, and objectively based strictly on the text provided above.
+2. When referencing methodology, numbers, datasets, or baselines, cite the specific sections or findings stated in the paper.
+3. If the paper does not mention or evaluate the topic of the question, explicitly state that it is not covered in the text instead of guessing.
+4. Format your answer with clean Markdown (bold text, bullet points, headers if helpful).`;
+
+  const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+
+  if (params.history && params.history.length > 0) {
+    contents.push({
+      role: "user",
+      parts: [
+        {
+          text: `[SYSTEM CONTEXT & GROUNDING]\n${systemInstructionText}\n\n[USER FIRST QUESTION]\n${params.history[0].content}`,
+        },
+      ],
+    });
+
+    for (let i = 1; i < params.history.length; i++) {
+      const h = params.history[i];
+      contents.push({
+        role: h.role === "assistant" ? "model" : "user",
+        parts: [{ text: h.content }],
+      });
+    }
+
+    contents.push({
+      role: "user",
+      parts: [{ text: params.question }],
+    });
+  } else {
+    contents.push({
+      role: "user",
+      parts: [
+        {
+          text: `${systemInstructionText}\n\nQuestion:\n${params.question}`,
+        },
+      ],
+    });
+  }
+
+  const payload = {
+    contents,
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 2000,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("No response body stream from Gemini API");
+  }
+
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr || jsonStr === "[DONE]") continue;
+
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const candidates = parsed.candidates;
+        if (candidates && candidates[0]?.content?.parts) {
+          for (const part of candidates[0].content.parts) {
+            if (part.text) {
+              yield part.text;
+            }
+          }
+        }
+      } catch {
+        // Skip malformed chunk
+      }
+    }
+  }
+}
+

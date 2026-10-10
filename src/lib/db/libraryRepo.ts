@@ -275,3 +275,54 @@ export function deletePaperSummary(paperId: string): void {
   db.prepare(`DELETE FROM paper_summaries WHERE paper_id = ?`).run(paperId);
 }
 
+export interface ChatMessageRecord {
+  id: number;
+  paperId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: string;
+}
+
+export function getChatMessages(paperId: string): ChatMessageRecord[] {
+  const db = getDatabase();
+  const rows = db.prepare(`
+    SELECT id, paper_id, role, content, created_at
+    FROM chat_messages
+    WHERE paper_id = ?
+    ORDER BY created_at ASC, id ASC
+  `).all(paperId) as any[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    paperId: r.paper_id,
+    role: r.role,
+    content: r.content,
+    createdAt: r.created_at,
+  }));
+}
+
+export function saveChatMessage(params: {
+  paperId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+}): ChatMessageRecord {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    INSERT INTO chat_messages (paper_id, role, content)
+    VALUES (?, ?, ?)
+  `);
+  const info = stmt.run(params.paperId, params.role, params.content);
+  return {
+    id: Number(info.lastInsertRowid),
+    paperId: params.paperId,
+    role: params.role,
+    content: params.content,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function clearChatMessages(paperId: string): void {
+  const db = getDatabase();
+  db.prepare(`DELETE FROM chat_messages WHERE paper_id = ?`).run(paperId);
+}
+
