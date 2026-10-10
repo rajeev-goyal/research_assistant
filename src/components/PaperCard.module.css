@@ -259,3 +259,37 @@
   border-color: #c7d2fe;
 }
 
+.askAiBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.12);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.askAiBtn:hover {
+  background: rgba(6, 182, 212, 0.25);
+  color: #22d3ee;
+  border-color: rgba(6, 182, 212, 0.6);
+  transform: translateY(-1px);
+}
+
+:global([data-theme="light"]) .askAiBtn {
+  background: #ecfeff;
+  color: #0891b2;
+  border-color: #a5f3fc;
+}
+
+:global([data-theme="light"]) .askAiBtn:hover {
+  background: #cffafe;
+  color: #0e7490;
+  border-color: #67e8f9;
+}
+

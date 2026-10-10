@@ -13,12 +13,14 @@ import {
   Sparkles,
   Award,
   Check,
+  MessageSquare,
 } from "lucide-react";
 
 interface PaperCardProps {
   paper: Paper;
   onToggleSave?: (paper: Paper, currentlySaved: boolean) => Promise<void>;
   onSelectForAI?: (paper: Paper) => void;
+  onAskAI?: (paper: Paper) => void;
   isSelected?: boolean;
   onToggleSelect?: (paper: Paper) => void;
   showCheckbox?: boolean;
@@ -28,6 +30,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   paper,
   onToggleSave,
   onSelectForAI,
+  onAskAI,
   isSelected = false,
   onToggleSelect,
   showCheckbox = false,
@@ -188,17 +191,31 @@ export const PaperCard: React.FC<PaperCardProps> = ({
           </a>
         </div>
 
-        {onSelectForAI && (
-          <button
-            className={styles.summarizeBtn}
-            onClick={() => onSelectForAI(paper)}
-            id={`btn-summarize-${paper.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`}
-            title="Summarize paper content with Gemini LLM"
-          >
-            <Sparkles size={14} />
-            <span>AI Summary</span>
-          </button>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {onSelectForAI && (
+            <button
+              className={styles.summarizeBtn}
+              onClick={() => onSelectForAI(paper)}
+              id={`btn-summarize-${paper.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`}
+              title="Summarize paper content with Gemini LLM"
+            >
+              <Sparkles size={14} />
+              <span>Summary</span>
+            </button>
+          )}
+
+          {onAskAI && (
+            <button
+              className={styles.askAiBtn}
+              onClick={() => onAskAI(paper)}
+              id={`btn-ask-${paper.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`}
+              title="Ask natural-language questions about this paper"
+            >
+              <MessageSquare size={14} />
+              <span>Ask AI</span>
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

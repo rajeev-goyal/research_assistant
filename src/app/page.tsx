@@ -56,13 +56,21 @@ export default function Home() {
   // Theme State
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
-  // AI Summary & Settings State
+  // AI Workspace & Settings State
   const [summaryPaper, setSummaryPaper] = useState<Paper | null>(null);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<"summary" | "chat">("summary");
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const handleOpenSummary = (paper: Paper) => {
     setSummaryPaper(paper);
+    setDrawerTab("summary");
+    setIsSummaryModalOpen(true);
+  };
+
+  const handleOpenChat = (paper: Paper) => {
+    setSummaryPaper(paper);
+    setDrawerTab("chat");
     setIsSummaryModalOpen(true);
   };
 
@@ -540,6 +548,7 @@ export default function Home() {
                     paper={paper}
                     onToggleSave={handleToggleSave}
                     onSelectForAI={handleOpenSummary}
+                    onAskAI={handleOpenChat}
                     showCheckbox={true}
                     isSelected={selectedPaperIds.has(paper.id)}
                     onToggleSelect={handleToggleSelect}
@@ -656,6 +665,7 @@ export default function Home() {
                   paper={paper}
                   onToggleSave={handleToggleSave}
                   onSelectForAI={handleOpenSummary}
+                  onAskAI={handleOpenChat}
                 />
               ))}
             </section>
@@ -715,12 +725,13 @@ export default function Home() {
         </aside>
       )}
 
-      {/* AI Summary Modal Drawer */}
+      {/* AI Research Workspace Modal Drawer */}
       <SummaryModal
         paper={summaryPaper}
         isOpen={isSummaryModalOpen}
         onClose={() => setIsSummaryModalOpen(false)}
         onOpenApiKeySettings={() => setIsApiKeyModalOpen(true)}
+        initialTab={drawerTab}
       />
 
       {/* Gemini API Key Settings Modal */}
