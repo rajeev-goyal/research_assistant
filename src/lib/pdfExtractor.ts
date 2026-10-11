@@ -48,6 +48,66 @@ function isHeaderNoise(line: string): boolean {
   );
 }
 
+function isAffiliationOrEmail(line: string): boolean {
+  const lower = line.toLowerCase();
+  return (
+    line.includes("@") ||
+    lower.startsWith("http") ||
+    lower.includes("project page") ||
+    lower.includes("github.com") ||
+    lower.includes("university") ||
+    lower.includes("department") ||
+    lower.includes("laboratory") ||
+    lower.includes("institute") ||
+    lower.includes("school of") ||
+    lower.includes("college of") ||
+    lower.includes("google brain") ||
+    lower.includes("google research") ||
+    lower.includes("meta ai") ||
+    lower.includes("microsoft research") ||
+    lower.includes("deepmind") ||
+    lower.includes("openai") ||
+    lower.includes("corporation") ||
+    lower.includes("center for")
+  );
+}
+
+function isAuthorLine(line: string): boolean {
+  if (isAffiliationOrEmail(line) || isHeaderNoise(line)) return false;
+  if (/[\bA-Za-z\u00C0-\u024F]+\s*[*∗†‡§\^#]/.test(line)) return true;
+  if (/\b[A-Za-z\u00C0-\u024F]+\s+\d+\b/.test(line)) return true;
+  if (line.includes(",") || /\band\b/i.test(line)) {
+    if (!/system|model|generation|algorithm|framework|learning|network|analysis|study|survey|review|approach|towards|interactive|diffusion|streaming/i.test(line)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function extractAuthorsFromLines(rawLines: string[]): string[] {
+  const authors: string[] = [];
+  for (const raw of rawLines) {
+    if (isAffiliationOrEmail(raw) || isHeaderNoise(raw)) continue;
+    let cleaned = raw.replace(/[*∗†‡§\^#]/g, "");
+    cleaned = cleaned.replace(/(\b[A-Za-z\u00C0-\u024F]+)\s*[\d,]+\s*/g, "$1, ");
+    cleaned = cleaned.replace(/\s+and\s+/gi, ", ");
+    cleaned = cleaned.replace(/\s*&\s*/g, ", ");
+
+    const parts = cleaned.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean);
+    for (const p of parts) {
+      const name = p.replace(/\s+/g, " ").trim();
+      if (/^[A-Za-z\u00C0-\u024F.-]+(?:\s+[A-Za-z\u00C0-\u024F.-]+)+$/.test(name)) {
+        const lower = name.toLowerCase();
+        const hasTechNoise = /video|generation|system|model|diffusion|streaming|learning|network|university|department|laboratory|institute|research|project|google|meta|microsoft|apple|amazon|openai|deepmind/i.test(lower);
+        if (!hasTechNoise && !authors.includes(name) && name.length >= 3 && name.length <= 40) {
+          authors.push(name);
+        }
+      }
+    }
+  }
+  return authors;
+}
+
 export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: string): Promise<ExtractedPdfMetadata> {
   const parser = new PDFParse({ data: buffer });
   let rawText = "";
@@ -69,16 +129,47 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
   }
 
   // Split first page / initial chunk into lines
-  const lines = rawText
+  const rawLines = rawText
     .slice(0, 3500)
     .split("\n")
     .map((l: string) => l.trim())
     .filter((l: string) => Boolean(l));
 
-  // --- 1. Extract Title ---
+  const preAbstractLines: string[] = [];
+  for (const l of rawLines) {
+    if (/^abstract\b/i.test(l)) break;
+    if (isHeaderNoise(l)) continue;
+    preAbstractLines.push(l);
+  }
+
+  // Detect boundary where title ends and authors begin
+  let firstAuthorIdx = -1;
+  for (let i = 0; i < preAbstractLines.length; i++) {
+    if (isAuthorLine(preAbstractLines[i])) {
+      firstAuthorIdx = i;
+      break;
+    }
+    if (i + 1 < preAbstractLines.length && isAffiliationOrEmail(preAbstractLines[i + 1])) {
+      firstAuthorIdx = i;
+      break;
+    }
+  }
+
+  let textExtractedTitle = "";
+  let authorCandidates: string[] = [];
+
+  if (firstAuthorIdx > 0) {
+    textExtractedTitle = preAbstractLines.slice(0, firstAuthorIdx).join(" ").replace(/\s+/g, " ").trim();
+    authorCandidates = preAbstractLines.slice(firstAuthorIdx);
+  } else if (preAbstractLines.length > 0) {
+    textExtractedTitle = preAbstractLines[0];
+    authorCandidates = preAbstractLines.slice(1);
+  }
+
+  // --- 1. Determine Title ---
   let title = "";
 
-  // Check PDF info dictionary first
+  // Check PDF info dictionary first if clean and not containing author concatenations
   if (info.Title && typeof info.Title === "string" && info.Title.trim().length > 5) {
     const infoTitle = info.Title.trim();
     const isGeneric =
@@ -90,50 +181,16 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
       infoTitle.toLowerCase().includes("attribution") ||
       infoTitle.toLowerCase().includes("copyright") ||
       infoTitle.toLowerCase().includes("rights reserved") ||
-      infoTitle.length > 200;
+      infoTitle.length > 200 ||
+      isAuthorLine(infoTitle); // Avoid titles contaminated with author lists
 
     if (!isGeneric) {
       title = cleanText(infoTitle);
     }
   }
 
-  // If not found in metadata or metadata was generic, extract top lines from text
   if (!title || title.length < 5) {
-    const titleCandidates: string[] = [];
-    let abstractIndex = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      if (/^abstract\b/i.test(lines[i])) {
-        abstractIndex = i;
-        break;
-      }
-    }
-
-    const searchLimit = abstractIndex > 0 ? Math.min(abstractIndex, 10) : Math.min(lines.length, 10);
-
-    for (let i = 0; i < searchLimit; i++) {
-      const line = lines[i];
-      if (isHeaderNoise(line)) continue;
-
-      // Stop if line looks like author affiliations or emails
-      if (
-        line.includes("@") ||
-        line.toLowerCase().includes("university") ||
-        line.toLowerCase().includes("department") ||
-        line.toLowerCase().includes("laboratory") ||
-        line.toLowerCase().includes("institute")
-      ) {
-        break;
-      }
-
-      titleCandidates.push(line);
-      // Academic titles rarely exceed 2-3 lines
-      if (titleCandidates.length >= 3) break;
-    }
-
-    if (titleCandidates.length > 0) {
-      title = cleanText(titleCandidates.join(" "));
-    }
+    title = textExtractedTitle;
   }
 
   // Fallback if still empty: use sanitized filename
@@ -148,7 +205,6 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
   // --- 2. Extract Year ---
   let year = new Date().getFullYear();
 
-  // Try creation date from metadata
   if (info.CreationDate && typeof info.CreationDate === "string") {
     const match = info.CreationDate.match(/D:(\d{4})/);
     if (match) {
@@ -159,7 +215,6 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
     }
   }
 
-  // If metadata year was not found, search in first 2000 characters
   if (year === new Date().getFullYear()) {
     const yearMatch = rawText.slice(0, 2000).match(/(?:©|Copyright|\(c\)|Published|Proceedings)[\s\S]{0,40}?(20\d\d|19\d\d)/i);
     if (yearMatch) {
@@ -179,7 +234,6 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
     const startIdx = abstractMatch.index + abstractMatch[0].length;
     const textAfterAbstract = rawText.slice(startIdx, startIdx + 3000);
 
-    // Look for next section header
     const endMatch = textAfterAbstract.match(
       /\n(?:\d+[\s.]+|[I|V|X]+[\s.]+|)(?:Introduction|Index Terms|Keywords|Categories and Subject Descriptors|Background|Overview)\b/i
     );
@@ -188,12 +242,10 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
     if (endMatch && endMatch.index !== undefined) {
       rawAbstract = textAfterAbstract.slice(0, endMatch.index);
     } else {
-      // Take first 1-2 paragraphs
       const paragraphs = textAfterAbstract.split(/\n\s*\n/);
       rawAbstract = paragraphs[0] || textAfterAbstract.slice(0, 1000);
     }
 
-    // Clean hyphenated word breaks (e.g. "com-\nputer" -> "computer")
     abstract = cleanText(
       rawAbstract
         .replace(/(\w+)-\n(\w+)/g, "$1$2")
@@ -206,56 +258,20 @@ export async function extractMetadataFromPdf(buffer: Buffer, originalFilename?: 
   }
 
   // --- 4. Extract Authors ---
-  const authors: string[] = [];
+  let authors: string[] = extractAuthorsFromLines(authorCandidates);
 
-  // Check metadata first
-  if (info.Author && typeof info.Author === "string" && info.Author.trim().length > 2) {
+  // If text lines yielded no authors, fallback to PDF info dictionary if valid person names
+  if (authors.length === 0 && info.Author && typeof info.Author === "string" && info.Author.trim().length > 2) {
     const metaAuthor = info.Author.trim();
-    if (
-      !metaAuthor.toLowerCase().includes("latex") &&
-      !metaAuthor.toLowerCase().includes("tex") &&
-      !metaAuthor.toLowerCase().includes("microsoft")
-    ) {
+    const hasTechNoise = /video|generation|system|model|diffusion|streaming|learning|network|latex|tex|microsoft|untitled/i.test(metaAuthor);
+    if (!hasTechNoise) {
       const parts = metaAuthor.split(/[,;&]|\band\b/i).map((a: string) => a.trim()).filter(Boolean);
       for (const p of parts) {
-        if (p.length > 2 && p.length < 50 && !authors.includes(p)) {
-          authors.push(p);
-        }
-      }
-    }
-  }
-
-  // Text heuristic if authors empty
-  if (authors.length === 0) {
-    let abstractIdx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (/^abstract\b/i.test(lines[i])) {
-        abstractIdx = i;
-        break;
-      }
-    }
-
-    // Look between title lines and abstract
-    if (abstractIdx > 1) {
-      for (let i = 1; i < abstractIdx; i++) {
-        const line = lines[i];
-        if (isHeaderNoise(line)) continue;
-        if (line.includes("@")) continue; // email line
-        if (/university|department|laboratory|institute|school|college|ltd|inc|group/i.test(line)) continue;
-
-        // Clean out superscript numbers/symbols
-        const cleanedLine = line.replace(/[\d*†‡§]+/g, "").trim();
-        const candidates = cleanedLine.split(/[,;&]|\band\b/i).map((c: string) => c.trim()).filter(Boolean);
-
-        for (const c of candidates) {
-          // A person's name usually has 2-4 words, starts with capital letters, and no special chars
-          if (/^[A-Z][a-zA-Z.'-]+(?:\s+[A-Z][a-zA-Z.'-]+){1,3}$/.test(c)) {
-            if (!authors.includes(c)) {
-              authors.push(c);
-            }
+        if (/^[A-Za-z\u00C0-\u024F.-]+(?:\s+[A-Za-z\u00C0-\u024F.-]+)+$/.test(p)) {
+          if (!authors.includes(p)) {
+            authors.push(p);
           }
         }
-        if (authors.length >= 6) break;
       }
     }
   }
