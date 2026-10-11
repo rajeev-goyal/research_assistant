@@ -535,16 +535,18 @@ export function SummaryModal({
           </p>
 
           <div className={styles.badgesRow}>
-            {sourceType === "full_pdf" ? (
-              <span className={`${styles.badge} ${styles.badgeFullPdf}`}>
-                <FileText size={12} />
-                Full-text PDF extracted {charCount > 0 ? `(${charCount.toLocaleString()} chars)` : ""}
-              </span>
-            ) : (
-              <span className={`${styles.badge} ${styles.badgeAbstract}`}>
-                <BookOpen size={12} />
-                Verified Abstract & Metadata {charCount > 0 ? `(${charCount.toLocaleString()} chars)` : ""}
-              </span>
+            {activeTab === "summary" && (
+              sourceType === "full_pdf" ? (
+                <span className={`${styles.badge} ${styles.badgeFullPdf}`}>
+                  <FileText size={12} />
+                  Full-text PDF extracted {charCount > 0 ? `(${charCount.toLocaleString()} chars)` : ""}
+                </span>
+              ) : (
+                <span className={`${styles.badge} ${styles.badgeAbstract}`}>
+                  <BookOpen size={12} />
+                  Verified Abstract & Metadata {charCount > 0 ? `(${charCount.toLocaleString()} chars)` : ""}
+                </span>
+              )
             )}
             <span className={`${styles.badge} ${styles.badgeModel}`}>
               <Cpu size={12} />

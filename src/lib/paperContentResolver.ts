@@ -304,7 +304,7 @@ export async function resolvePaperContent(paper: Partial<Paper> & { id: string; 
     ? paper.abstract.trim()
     : "No abstract text available for this publication.";
 
-  const contentText = `${metadataSnippet}\n\nAbstract:\n${abstractContent}`;
+  const contentText = `${metadataSnippet}\n\n${abstractContent}`;
 
   return {
     paperId: paper.id,

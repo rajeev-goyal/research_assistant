@@ -162,25 +162,19 @@ export async function* streamGeminiChatAnswer(
 ): AsyncGenerator<string, void, unknown> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  const isFullPdf = params.sourceType === "full_pdf";
-  const sourceDesc = isFullPdf
-    ? "extracted full-text manuscript of the paper"
-    : "official abstract and published metadata of the paper";
-
   const systemInstructionText = `You are a distinguished academic research assistant answering questions about the paper "${params.paperTitle}".
 
-Grounding Level: ${isFullPdf ? "Full-text PDF manuscript extracted" : "Published abstract and metadata only (full PDF was not open-access or not uploaded)"}
-
-The following is the ${sourceDesc}:
+The following is the text of the paper:
 ----------------------------------------
 ${params.contentText.slice(0, 120000)}
 ----------------------------------------
 
 Instructions:
-1. Answer the user's question directly, accurately, and objectively based on the text provided above.
-2. When referencing methodology, numbers, datasets, or baselines, cite the specific sections or findings stated in the text.
-3. If the paper does not mention or evaluate the topic (e.g. if the work is a software framework release without training datasets, or if only the abstract is available and specific experimental details like dataset names or benchmark tables are missing from the abstract), state this clearly and objectively. If only the abstract was analyzed, inform the user that they can upload the full PDF paper via the "Upload PDF" button in the application to analyze the entire manuscript.
-4. Format your answer with clean Markdown (bold text, bullet points, headers if helpful).`;
+1. Answer the user's question directly, accurately, and objectively based strictly on the paper text provided above.
+2. When referencing methodology, numbers, findings, or mechanisms, cite the relevant information directly from the text.
+3. If the paper does not mention or evaluate a specific topic or detail, state directly and concisely that the paper does not mention it.
+4. Do NOT include any meta-commentary about whether the text is an abstract, metadata, or full extraction. Never state that you are only analyzing an abstract or metadata, and do not suggest uploading PDFs.
+5. Format your answer with clean Markdown (bold text, bullet points, headers if helpful).`;
 
   const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
 
