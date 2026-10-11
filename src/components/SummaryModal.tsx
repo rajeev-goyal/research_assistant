@@ -71,6 +71,9 @@ export function SummaryModal({
   const [isChatStreaming, setIsChatStreaming] = useState<boolean>(false);
   const [streamingAnswer, setStreamingAnswer] = useState<string>("");
   const [chatError, setChatError] = useState<string | null>(null);
+  const [isClearingChat, setIsClearingChat] = useState<boolean>(false);
+  const [clearedNotice, setClearedNotice] = useState<boolean>(false);
+  const [confirmClear, setConfirmClear] = useState<boolean>(false);
 
   const summaryAbortRef = useRef<AbortController | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -118,6 +121,13 @@ export function SummaryModal({
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages, streamingAnswer, activeTab]);
+
+  // Auto-reset confirmation state after 5 seconds if not confirmed
+  useEffect(() => {
+    if (!confirmClear) return;
+    const timer = setTimeout(() => setConfirmClear(false), 5000);
+    return () => clearTimeout(timer);
+  }, [confirmClear]);
 
   // SUMMARY LOGIC
   const fetchOrGenerateSummary = async (forceRefresh = false) => {
@@ -343,15 +353,35 @@ export function SummaryModal({
     }
   };
 
-  const handleClearChat = async () => {
-    if (!paper) return;
+  const executeClearChat = async () => {
+    if (!paper || isClearingChat) return;
+
+    if (chatAbortRef.current) {
+      chatAbortRef.current.abort();
+    }
+    setIsChatStreaming(false);
+    setIsClearingChat(true);
+    setConfirmClear(false);
+
     try {
-      await fetch(`/api/ai/chat?paperId=${encodeURIComponent(paper.id)}`, { method: "DELETE" });
-      setChatMessages([]);
-      setStreamingAnswer("");
+      const res = await fetch(`/api/ai/chat?paperId=${encodeURIComponent(paper.id)}`, { method: "DELETE" });
+      if (res.ok) {
+        setChatMessages([]);
+        setStreamingAnswer("");
+        setChatError(null);
+        setClearedNotice(true);
+        setTimeout(() => setClearedNotice(false), 3000);
+      }
     } catch (err) {
       console.error("Failed to clear chat:", err);
+    } finally {
+      setIsClearingChat(false);
     }
+  };
+
+  const handleClearChat = () => {
+    if (chatMessages.length === 0) return;
+    setConfirmClear(true);
   };
 
   const handleCopy = () => {
@@ -531,22 +561,59 @@ export function SummaryModal({
 
         {/* Tab Switcher */}
         <div className={styles.tabsBar}>
-          <button
-            className={`${styles.tabBtn} ${activeTab === "summary" ? styles.tabBtnActive : ""}`}
-            onClick={() => setActiveTab("summary")}
-            id="tab-summary"
-          >
-            <BookOpen size={15} />
-            <span>Summary & Synthesis</span>
-          </button>
-          <button
-            className={`${styles.tabBtn} ${activeTab === "chat" ? styles.tabBtnActive : ""}`}
-            onClick={() => setActiveTab("chat")}
-            id="tab-chat"
-          >
-            <MessageSquare size={15} />
-            <span>Ask Questions ({chatMessages.length})</span>
-          </button>
+          <div className={styles.tabButtonsGroup}>
+            <button
+              className={`${styles.tabBtn} ${activeTab === "summary" ? styles.tabBtnActive : ""}`}
+              onClick={() => setActiveTab("summary")}
+              id="tab-summary"
+            >
+              <BookOpen size={15} />
+              <span>Summary & Synthesis</span>
+            </button>
+            <button
+              className={`${styles.tabBtn} ${activeTab === "chat" ? styles.tabBtnActive : ""}`}
+              onClick={() => setActiveTab("chat")}
+              id="tab-chat"
+            >
+              <MessageSquare size={15} />
+              <span>Ask Questions ({chatMessages.length})</span>
+            </button>
+          </div>
+
+          {activeTab === "chat" && chatMessages.length > 0 && (
+            confirmClear ? (
+              <div className={styles.confirmClearGroup}>
+                <span className={styles.confirmClearPrompt}>Clear messages?</span>
+                <button
+                  className={styles.confirmClearYesBtn}
+                  onClick={executeClearChat}
+                  disabled={isClearingChat}
+                  id="btn-confirm-clear-yes"
+                >
+                  <Trash2 size={12} />
+                  <span>Yes, Clear</span>
+                </button>
+                <button
+                  className={styles.confirmClearCancelBtn}
+                  onClick={() => setConfirmClear(false)}
+                  id="btn-confirm-clear-cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                className={styles.clearChatBtn}
+                onClick={handleClearChat}
+                disabled={isClearingChat || isChatStreaming}
+                title="Clear conversation history for this paper"
+                id="btn-clear-chat-history"
+              >
+                <Trash2 size={13} />
+                <span>{isClearingChat ? "Clearing..." : "Clear History"}</span>
+              </button>
+            )
+          )}
         </div>
 
         {/* TAB 1: SUMMARY */}
@@ -612,6 +679,13 @@ export function SummaryModal({
         {activeTab === "chat" && (
           <div className={styles.chatContainer}>
             <div className={styles.chatMessagesScroll}>
+              {clearedNotice && (
+                <div className={styles.clearedBanner}>
+                  <Check size={14} color="#10b981" />
+                  <span>Conversation history cleared</span>
+                </div>
+              )}
+
               {/* Suggested Questions Section */}
               <div className={styles.suggestedHeader}>Suggested Questions:</div>
               <div className={styles.chipsGrid}>

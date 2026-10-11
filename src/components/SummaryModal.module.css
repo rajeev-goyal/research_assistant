@@ -181,10 +181,130 @@
 /* Tabs Bar */
 .tabsBar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   padding: 0.75rem 1.75rem 0.5rem;
   border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.16));
   background: var(--bg-surface, #121829);
+}
+
+.tabButtonsGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clearChatBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 7px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clearChatBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ef4444;
+  transform: translateY(-1px);
+}
+
+.clearChatBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+:global([data-theme="light"]) .clearChatBtn {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+:global([data-theme="light"]) .clearChatBtn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.confirmClearGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.confirmClearPrompt {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fca5a5;
+}
+
+:global([data-theme="light"]) .confirmClearPrompt {
+  color: #b91c1c;
+}
+
+.confirmClearYesBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.confirmClearYesBtn:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.confirmClearYesBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmClearCancelBtn {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: var(--text-muted, #cbd5e1);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.16));
+  border-radius: 5px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.confirmClearCancelBtn:hover {
+  background: var(--bg-surface-elevated, #1a233a);
+  color: var(--text-main, #ffffff);
+}
+
+:global([data-theme="light"]) .confirmClearCancelBtn {
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+:global([data-theme="light"]) .confirmClearCancelBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .tabBtn {
@@ -327,6 +447,31 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.clearedBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.95rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .suggestedHeader {
