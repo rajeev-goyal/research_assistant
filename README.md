@@ -5,13 +5,61 @@ A modern, desktop-grade web application designed to help researchers search lite
 ---
 
 ## Table of Contents
+- [Prerequisites](#prerequisites)
+- [Setup & Execution Instructions](#setup--execution-instructions)
 - [Major Features](#major-features)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Setup & Execution Instructions](#setup--execution-instructions)
 - [API Reference](#api-reference)
 - [License](#license)
+
+---
+
+## Prerequisites
+
+- **Node.js**: `v18.18.0` or higher (tested on Node v20+ and v22+)
+- **npm**: `v9.0.0` or higher
+
+---
+
+## Setup & Execution Instructions
+
+### 1. Clone & Install Dependencies
+
+```bash
+git clone https://github.com/rajeev-goyal/research_assistant.git
+cd research_assistant
+
+# Install project dependencies
+npm install
+```
+
+### 2. Configure Gemini API Key (Optional / Zero-Config)
+
+You can either configure your key in `.env.local` or directly in the browser UI via the **"AI Key"** settings button:
+
+```bash
+# Create .env.local in the root directory (already git-ignored)
+echo 'GEMINI_API_KEY="your-google-gemini-api-key"' > .env.local
+```
+
+### 3. Run the Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 4. Build & Run for Production
+
+```bash
+# Build the optimized production application
+npm run build
+
+# Start the production server
+npm start
+```
 
 ---
 
@@ -152,54 +200,6 @@ A modern, desktop-grade web application designed to help researchers search lite
 ├── PLAN_DETAILED.md            # In-depth architectural implementation plan
 ├── PLAN_SUMMARY.md             # High-level roadmap and milestone summaries
 └── package.json                # Project dependencies and npm scripts
-```
-
----
-
-## Prerequisites
-
-- **Node.js**: `v18.18.0` or higher (tested on Node v20+ and v22+)
-- **npm**: `v9.0.0` or higher
-
----
-
-## Setup & Execution Instructions
-
-### 1. Clone & Install Dependencies
-
-```bash
-git clone https://github.com/rajeev-goyal/research_assistant.git
-cd research_assistant
-
-# Install project dependencies
-npm install
-```
-
-### 2. Configure Gemini API Key (Optional / Zero-Config)
-
-You can either configure your key in `.env.local` or directly in the browser UI via the **"AI Key"** settings button:
-
-```bash
-# Create .env.local in the root directory (already git-ignored)
-echo 'GEMINI_API_KEY="your-google-gemini-api-key"' > .env.local
-```
-
-### 3. Run the Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 4. Build & Run for Production
-
-```bash
-# Build the optimized production application
-npm run build
-
-# Start the production server
-npm start
 ```
 
 ---
