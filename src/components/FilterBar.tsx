@@ -13,6 +13,8 @@ interface FilterBarProps {
   provider: "all" | "openalex" | "arxiv";
   onProviderChange: (provider: "all" | "openalex" | "arxiv") => void;
   providerUsed?: string;
+  openAccessOnly?: boolean;
+  onOpenAccessChange?: (oa: boolean) => void;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -24,6 +26,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   provider,
   onProviderChange,
   providerUsed,
+  openAccessOnly = false,
+  onOpenAccessChange,
 }) => {
   return (
     <div className={styles.filterBar}>
@@ -84,6 +88,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <option value="arxiv">arXiv (Pre-prints)</option>
           </select>
         </div>
+
+        {onOpenAccessChange && (
+          <div className={styles.selectWrapper}>
+            <span>Access:</span>
+            <select
+              className={styles.select}
+              value={openAccessOnly ? "oa" : "all"}
+              onChange={(e) => onOpenAccessChange(e.target.value === "oa")}
+              id="select-access-filter"
+            >
+              <option value="all">All Papers</option>
+              <option value="oa">Open Access Only</option>
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );

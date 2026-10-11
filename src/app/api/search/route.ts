@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const sortBy = (searchParams.get("sortBy") || "relevance") as "relevance" | "date";
     const year = searchParams.get("year") || undefined;
     const provider = (searchParams.get("provider") || "all") as "all" | "openalex" | "arxiv";
+    const openAccessOnly = searchParams.get("openAccessOnly") === "true";
 
     if (!query.trim()) {
       return NextResponse.json({
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       year,
       provider,
+      openAccessOnly,
     });
 
     return NextResponse.json({

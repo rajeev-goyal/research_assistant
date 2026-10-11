@@ -9,6 +9,7 @@ export interface UnifiedSearchParams {
   provider?: "all" | "openalex" | "arxiv";
   sortBy?: "relevance" | "date";
   year?: string;
+  openAccessOnly?: boolean;
 }
 
 function reconstructAbstract(invertedIndex: Record<string, number[]> | undefined | null): string {
@@ -305,8 +306,15 @@ export async function searchOpenAlex(params: UnifiedSearchParams): Promise<Searc
     url.searchParams.set("sort", "relevance_score:desc");
   }
 
+  const filterParts: string[] = [];
   if (year && year !== "all") {
-    url.searchParams.set("filter", `publication_year:${year}`);
+    filterParts.push(`publication_year:${year}`);
+  }
+  if (params.openAccessOnly) {
+    filterParts.push("is_oa:true");
+  }
+  if (filterParts.length > 0) {
+    url.searchParams.set("filter", filterParts.join(","));
   }
 
   const response = await fetch(url.toString(), {
@@ -358,13 +366,38 @@ export async function searchOpenAlex(params: UnifiedSearchParams): Promise<Searc
       item.primary_location?.landing_page_url ||
       `https://openalex.org/${rawId}`;
 
-    const pdfUrl =
+    let pdfUrl =
       item.best_oa_location?.pdf_url ||
       item.locations?.find((l: any) => l.pdf_url)?.pdf_url ||
       item.primary_location?.pdf_url ||
       (item.open_access?.oa_url && item.open_access.oa_url.toLowerCase().endsWith(".pdf")
         ? item.open_access.oa_url
         : undefined);
+
+    // Check for direct arXiv preprints embedded in OpenAlex item identifiers
+    if (!pdfUrl) {
+      if (item.ids?.arxiv) {
+        const cleanArxiv = item.ids.arxiv.replace(/^https?:\/\/arxiv\.org\/abs\//i, "");
+        pdfUrl = `https://arxiv.org/pdf/${cleanArxiv}.pdf`;
+      } else if (item.doi && item.doi.includes("arxiv.")) {
+        const match = item.doi.match(/arxiv\.([0-9]+\.[0-9]+(v[0-9]+)?)/i);
+        if (match && match[1]) {
+          pdfUrl = `https://arxiv.org/pdf/${match[1]}.pdf`;
+        }
+      } else if (Array.isArray(item.locations)) {
+        const arxivLoc = item.locations.find(
+          (l: any) =>
+            l.source?.display_name?.toLowerCase().includes("arxiv") ||
+            l.landing_page_url?.includes("arxiv.org")
+        );
+        if (arxivLoc?.landing_page_url) {
+          const match = arxivLoc.landing_page_url.match(/arxiv\.org\/abs\/([0-9]+\.[0-9]+(v[0-9]+)?)/i);
+          if (match && match[1]) {
+            pdfUrl = `https://arxiv.org/pdf/${match[1]}.pdf`;
+          }
+        }
+      }
+    }
 
     const paper: Paper = {
       id,

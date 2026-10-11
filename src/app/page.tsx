@@ -38,6 +38,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<"relevance" | "date">("relevance");
   const [year, setYear] = useState("all");
   const [provider, setProvider] = useState<"all" | "openalex" | "arxiv">("all");
+  const [openAccessOnly, setOpenAccessOnly] = useState(false);
   const [results, setResults] = useState<Paper[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [providerUsed, setProviderUsed] = useState("");
@@ -128,7 +129,8 @@ export default function Home() {
       pageNumber: number = 1,
       sortOrder: "relevance" | "date" = sortBy,
       yearFilter: string = year,
-      sourceProvider: "all" | "openalex" | "arxiv" = provider
+      sourceProvider: "all" | "openalex" | "arxiv" = provider,
+      isOA: boolean = openAccessOnly
     ) => {
       if (!searchQuery.trim()) return;
 
@@ -147,6 +149,10 @@ export default function Home() {
 
         if (yearFilter !== "all") {
           params.set("year", yearFilter);
+        }
+
+        if (isOA) {
+          params.set("openAccessOnly", "true");
         }
 
         const res = await fetch(`/api/search?${params.toString()}`);
@@ -169,38 +175,42 @@ export default function Home() {
         setIsLoading(false);
       }
     },
-    [sortBy, year, provider]
+    [sortBy, year, provider, openAccessOnly]
   );
-
-
 
   const handleSearchSubmit = (newQuery: string) => {
     setQuery(newQuery);
     setPage(1);
-    performSearch(newQuery, 1, sortBy, year, provider);
+    performSearch(newQuery, 1, sortBy, year, provider, openAccessOnly);
   };
 
   const handleSortChange = (newSort: "relevance" | "date") => {
     setSortBy(newSort);
     setPage(1);
-    performSearch(query, 1, newSort, year, provider);
+    performSearch(query, 1, newSort, year, provider, openAccessOnly);
   };
 
   const handleYearChange = (newYear: string) => {
     setYear(newYear);
     setPage(1);
-    performSearch(query, 1, sortBy, newYear, provider);
+    performSearch(query, 1, sortBy, newYear, provider, openAccessOnly);
   };
 
   const handleProviderChange = (newProvider: "all" | "openalex" | "arxiv") => {
     setProvider(newProvider);
     setPage(1);
-    performSearch(query, 1, sortBy, year, newProvider);
+    performSearch(query, 1, sortBy, year, newProvider, openAccessOnly);
+  };
+
+  const handleOpenAccessChange = (newOA: boolean) => {
+    setOpenAccessOnly(newOA);
+    setPage(1);
+    performSearch(query, 1, sortBy, year, provider, newOA);
   };
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1) return;
-    performSearch(query, newPage, sortBy, year, provider);
+    performSearch(query, newPage, sortBy, year, provider, openAccessOnly);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -420,6 +430,8 @@ export default function Home() {
               provider={provider}
               onProviderChange={handleProviderChange}
               providerUsed={providerUsed}
+              openAccessOnly={openAccessOnly}
+              onOpenAccessChange={handleOpenAccessChange}
             />
           )}
 
