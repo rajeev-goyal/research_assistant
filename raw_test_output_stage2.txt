@@ -1,0 +1,55 @@
+
+> ai-research-assistant@0.1.0 test:coverage
+> vitest run --coverage
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/rajeevgoyal/Codes/ASE[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [31m❯[39m tests/lib/pdfExtractor.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 18[2mms[22m[39m
+   [31m❯[39m PDF Text Extractor & Heuristics - extractMetadataFromPdf [2m(8)[22m
+     [32m✓[39m should extract title, authors, year, and abstract from standard academic paper text[32m 5[2mms[22m[39m
+     [32m✓[39m should filter messy conference header noise, copyright notices, and institutional email blocks[32m 3[2mms[22m[39m
+     [32m✓[39m should handle spaced OCR character artifacts in abstract heading (A B S T R A C T)[32m 1[2mms[22m[39m
+[31m     [31m×[31m should fallback to clean author in PDF metadata dictionary when text lines lack authors[39m[32m 8[2mms[22m[39m
+     [32m✓[39m should reject software/generic author in PDF info dictionary and fall back to Unknown Author[32m 0[2mms[22m[39m
+     [32m✓[39m should detect publication year from raw text copyright notice when CreationDate is absent[32m 0[2mms[22m[39m
+     [32m✓[39m should fallback to sanitized filename when PDF title is generic or missing[32m 0[2mms[22m[39m
+     [32m✓[39m should fallback when abstract is not detected in the document[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/arxiv.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/lib/search.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/db/libraryRepo.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m tests/api/apiRoutes.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/components/components.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+ [32m✓[39m tests/lib/aiModules.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 382[2mms[22m[39m
+   [32m✓[39m AI Services & Paper Content Resolver [2m(9)[22m
+     [32m✓[39m resolvePaperContent [2m(2)[22m
+       [33m[2m✓[22m[39m should fallback to abstract and metadata when no PDF is accessible[33m 372[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/lib/pdfExtractor.test.ts[2m > [22mPDF Text Extractor & Heuristics - extractMetadataFromPdf[2m > [22mshould fallback to clean author in PDF metadata dictionary when text lines lack authors
+[31m[1mAssertionError[22m: expected 2026 to be 1948 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1948[39m
+[31m+ 2026[39m
+
+[36m [2m❯[22m tests/lib/pdfExtractor.test.ts:[2m164:25[22m[39m
+    [90m162|[39m     expect(result.title).toBe("A Mathematical Theory of Communication"…
+    [90m163|[39m     expect(result.authors).toEqual(["Claude Shannon", "Warren Weaver"]…
+    [90m164|[39m     [34mexpect[39m(result[33m.[39myear)[33m.[39m[34mtoBe[39m([34m1948[39m)[33m;[39m
+    [90m   |[39m                         [31m^[39m
+    [90m165|[39m   })[33m;[39m
+    [90m166|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m77 passed[39m[22m[90m (78)[39m
+[2m   Start at [22m 15:24:38
+[2m   Duration [22m 2.65s[2m (environment 76%, setup 12%, tests 4%, import 3%, transform 3%, worker 2%)[22m
+

@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterBar } from "@/components/FilterBar";
 import { PaperCard } from "@/components/PaperCard";
@@ -144,14 +144,70 @@ describe("Frontend UI Components", () => {
       expect(screen.getByText(/Show less/i)).toBeInTheDocument();
     });
 
-    it("triggers onToggleSave when Save Paper button is clicked", () => {
-      const handleToggleSave = vi.fn();
+    it("triggers onToggleSave when Save Paper button is clicked", async () => {
+      const handleToggleSave = vi.fn().mockResolvedValue(undefined);
       render(<PaperCard paper={testPaper} onToggleSave={handleToggleSave} />);
 
       const saveBtn = screen.getByTitle("Save to Local Library");
-      fireEvent.click(saveBtn);
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
 
       expect(handleToggleSave).toHaveBeenCalledWith(testPaper, false);
+      expect(saveBtn).toHaveTextContent("Saved");
+      expect(saveBtn).toHaveAttribute("title", "Remove from Library");
+    });
+
+    it("rolls back optimistic save state when onToggleSave rejects with an error", async () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const handleToggleSave = vi.fn().mockRejectedValue(new Error("Database write failure"));
+
+      render(<PaperCard paper={{ ...testPaper, isSaved: false }} onToggleSave={handleToggleSave} />);
+
+      const saveBtn = screen.getByTitle("Save to Local Library");
+      expect(saveBtn).toHaveTextContent("Save Paper");
+
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      expect(handleToggleSave).toHaveBeenCalledWith(
+        expect.objectContaining({ id: testPaper.id }),
+        false
+      );
+
+      // Verify the state has rolled back to "Save Paper" / "Save to Local Library"
+      expect(saveBtn).toHaveTextContent("Save Paper");
+      expect(saveBtn).toHaveAttribute("title", "Save to Local Library");
+      expect(saveBtn).not.toBeDisabled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("rolls back optimistic unsave state when onToggleSave rejects while removing", async () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const handleToggleSave = vi.fn().mockRejectedValue(new Error("Database delete failure"));
+
+      render(<PaperCard paper={{ ...testPaper, isSaved: true }} onToggleSave={handleToggleSave} />);
+
+      const saveBtn = screen.getByTitle("Remove from Library");
+      expect(saveBtn).toHaveTextContent("Saved");
+
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      expect(handleToggleSave).toHaveBeenCalledWith(
+        expect.objectContaining({ id: testPaper.id }),
+        true
+      );
+
+      // Verify the state has rolled back to "Saved" / "Remove from Library"
+      expect(saveBtn).toHaveTextContent("Saved");
+      expect(saveBtn).toHaveAttribute("title", "Remove from Library");
+      expect(saveBtn).not.toBeDisabled();
+
+      consoleErrorSpy.mockRestore();
     });
 
     it("triggers onSelectForAI when AI Summary button is clicked", () => {

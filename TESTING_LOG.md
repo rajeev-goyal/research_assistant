@@ -224,3 +224,115 @@ Based on the V8 code coverage report (36.36% overall line coverage), the primary
    - Lines 35–86: The successful upload execution branch that writes binary to `data/uploads/`, generates SHA-256 hashes, extracts metadata, and saves to SQLite.
 5. **`src/app/api/ai/summarize/route.ts` & `src/app/api/ai/chat/route.ts` (~27–33% Lines Covered)**:
    - Streaming execution branches, SQLite caching on completion, and cache retrieval (`GET` with existing summary).
+
+
+---
+
+## Stage 2: Execution Feedback & Test Hardening
+
+- **Timestamp**: 2026-11-08 15:07:35 EST
+- **Focus**: Hardening initial test suite, eliminating weak assertions, expanding heuristic depth, and verifying error propagation without touching application source files in `src/`.
+
+### 1. Modified Test Files & Detailed Changes
+
+#### A. `tests/api/apiRoutes.test.ts`
+- **Strengthened `GET /api/ai/status`**:
+  - *Added Assertions*: Explicitly verified both the `configured: true` branch (valid API key $>10$ characters) and the `configured: false` branches (when the key is `null`/stripped, or when the key is $\le 10$ characters).
+  - *Rationale*: Previously only tested the truthy case with a mock key, allowing a regression in the falsy/missing branch to pass undetected.
+- **Deep Database State Assertion for `POST /api/library` (Batch Save)**:
+  - *Added Assertions*: Replaced mock return verification with an actual in-memory SQLite database (`:memory:`) running under foreign-key constraints. Asserted that:
+    1. Parent rows in `papers` exist with accurate titles, abstracts, years, and sources (`paper:1`, `paper:2`).
+    2. Relational child rows in `paper_authors` exist with exact foreign keys (`paper_id`), correct `name` strings, and preserving `author_order` (0, 1).
+  - *Rationale*: Verifies actual SQL schema integrity, transaction atomicity, and relational cascade consistency rather than assuming `savePapersBatch` worked simply because a spy was invoked.
+- **Error Propagation & Malformed Input Testing**:
+  - *Added Assertions*:
+    - `GET /api/search`: Verified HTTP 500 and `{ success: false, error: ... }` response when `searchPapers` throws an unexpected network error.
+    - `POST /api/upload`: Verified HTTP 500 when `req.formData()` rejects with stream corruption, and when `extractMetadataFromPdf` fails on unreadable PDF data.
+    - `POST /api/library`: Verified HTTP 500 and structured error response when request payload is malformed raw JSON.
+  - *Rationale*: Confirms that API route try/catch boundaries prevent process crashes and surface uniform JSON error payloads for client error boundaries.
+
+#### B. `tests/components/components.test.tsx`
+- **Optimistic State Update & Rollback Verification on `PaperCard`**:
+  - *Added Assertions*:
+    - Tested save failure: When `onToggleSave` returns a rejected Promise during a save action, verified that the card rolls back from `"Saved"` back to `"Save Paper"`, restores `"Save to Local Library"`, and re-enables the button without getting stuck in a disabled/loading state.
+    - Tested unsave failure: When `onToggleSave` returns a rejected Promise during an unsave action, verified that the card rolls back from `"Save Paper"` back to `"Saved"` with `"Remove from Library"`.
+  - *Wrapped in `act(...)`*: Wrapped async state transitions in React Testing Library's `act(...)` to eliminate React 19 timing warnings and verify realistic UI states.
+  - *Rationale*: Optimistic updates provide responsive UX, but can lead to desynchronized UI state if network failures fail to revert local component state.
+
+#### C. `tests/lib/pdfExtractor.test.ts`
+- **Edge-Case Formatting & Noise Filtering**:
+  - *Added Assertions*:
+    - Messy multi-line conference headers: Injected conference proceedings stamps (ICML, PMLR), copyright notices, volume/page markers, and DOI URLs prior to the true title. Confirmed that `isHeaderNoise` filters them and extracts only the legitimate title.
+    - Author footnote suppression: Verified that footnote asterisks (`*`), numbers (`1`, `2`), affiliation blocks (`Idiap Research Institute`, `University of Washington`), and emails (`{angelos, apoorv}@idiap.ch`) are purged, retaining only normalized person names.
+    - OCR hyphenation stitching: Tested abstract sentences broken across lines with hyphens (`Transfor-\nmers` $\rightarrow$ `Transformers`, `computa-\ntional` $\rightarrow$ `computational`), verifying clean whitespace and word reconstitution.
+    - Spaced OCR headings: Verified detection of spaced character patterns (`A B S T R A C T`) and Roman numeral section terminations (`I. INTRODUCTION`).
+    - Author fallback hierarchy: Verified that clean PDF info dictionary authors (`Claude Shannon and Warren Weaver`) are utilized when body text lacks author blocks, while generic software strings (`Microsoft Word - Document1`) are rejected in favor of `"Unknown Author"`.
+    - Regex copyright fallback: Verified publication year extraction from raw copyright text (`© 2022 IEEE`) when PDF `CreationDate` metadata is missing.
+  - *Rationale*: Real-world research PDFs exhibit diverse typesetting anomalies; heuristic extractors must be resilient against OCR noise and non-standard layouts.
+
+---
+
+### 2. Summary of Hardened Test Suite Status
+
+- **Files Modified**:
+  - [`tests/api/apiRoutes.test.ts`](file:///Users/rajeevgoyal/Codes/ASE/tests/api/apiRoutes.test.ts)
+  - [`tests/components/components.test.tsx`](file:///Users/rajeevgoyal/Codes/ASE/tests/components/components.test.tsx)
+  - [`tests/lib/pdfExtractor.test.ts`](file:///Users/rajeevgoyal/Codes/ASE/tests/lib/pdfExtractor.test.ts)
+- **Application Source Files (`src/`)**: 0 modified (strict adherence to non-destructive testing guidelines).
+- **Static Type Validation**: All test files pass TypeScript static analysis (`tsc --noEmit`) with 0 errors.
+- **Terminal Test Execution**: Paused per user instructions (awaiting execution trigger).
+
+
+---
+
+### 3. Iteration 1 Execution Results & Coverage Analysis
+
+- **Timestamp**: 2026-11-08 15:24:55 EST
+- **Runner**: Vitest `v5.1.0` with V8 Coverage Provider
+- **Command**: `npm run test:coverage`
+- **Execution Summary**:
+  - **Total Tests**: 78 (+13 new tests added compared to Stage 1's 65 tests)
+  - **Passed Tests**: 77 (98.7%)
+  - **Failed Tests**: 1 (1.3%)
+  - **Test Files**: 6 passed, 1 failed (7 total)
+
+#### Coverage Metrics & Stage 1 vs. Stage 2 Delta
+
+| Metric | Stage 1 (Initial Suite) | Stage 2 (Hardened Suite) | Delta |
+|---|:---:|:---:|:---:|
+| **Line Coverage** | 36.36% | **38.56%** | **+2.20%** |
+| **Branch Coverage** | 35.69% | **37.18%** | **+1.49%** |
+| **Statement Coverage** | 35.73% | **37.84%** | **+2.11%** |
+| **Function Coverage** | 35.98% | **36.40%** | **+0.42%** |
+
+#### Subsystem & File-Level Coverage Improvements
+
+| File / Component | Stage 1 Lines | Stage 2 Lines | Line Delta | Stage 1 Branches | Stage 2 Branches | Branch Delta |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `src/app/api/search/route.ts` | 86.66% | **100.00%** | **+13.34%** | 87.50% | **93.75%** | **+6.25%** |
+| `src/app/api/upload/route.ts` | 37.03% | **77.77%** | **+40.74%** | 58.33% | **83.33%** | **+25.00%** |
+| `src/app/api/library/route.ts` | 76.66% | **83.33%** | **+6.67%** | 66.66% | **70.83%** | **+4.17%** |
+| `src/lib/pdfExtractor.ts` | 85.34% | **98.27%** | **+12.93%** | 80.37% | **90.50%** | **+10.13%** |
+| `src/components/PaperCard.tsx` | 87.50% | **95.83%** | **+8.33%** | 71.18% | 71.18% | 0.00% |
+
+#### Genuine Application Bugs Detected by Tightened Assertions
+
+- **Bug Location**: [`src/lib/pdfExtractor.ts`](file:///Users/rajeevgoyal/Codes/ASE/src/lib/pdfExtractor.ts) lines 212 and 222
+- **Test Case**: `tests/lib/pdfExtractor.test.ts > should fallback to clean author in PDF metadata dictionary when text lines lack authors`
+- **Assertion Failure**:
+  ```
+  AssertionError: expected 2026 to be 1948 // Object.is equality
+  - Expected: 1948
+  + Received: 2026
+  ```
+- **Root Cause & Impact**:
+  - The publication year extraction heuristic in `src/lib/pdfExtractor.ts` contains a hardcoded range check:
+    ```typescript
+    if (parsed >= 1950 && parsed <= year + 1) {
+      year = parsed;
+    }
+    ```
+  - When extracting historical, foundational academic literature published prior to 1950 (such as Claude Shannon's landmark 1948 paper *"A Mathematical Theory of Communication"*, Alan Turing's 1936 computability papers, or early 20th-century physics papers), `parsed >= 1950` evaluates to `false`.
+  - As a result, the parsed historical publication year is silently rejected, and the paper incorrectly defaults to `new Date().getFullYear()` (`2026`).
+- **Classification**: **Genuine Application Heuristic Bug**.
+- **Action Taken**: In accordance with the testing rules, the test was preserved asserting the correct expected behavior (`1948`), and the bug was documented directly in the test file via code comments pending a fix in `src/lib/pdfExtractor.ts`.
