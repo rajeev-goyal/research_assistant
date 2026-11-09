@@ -7,6 +7,7 @@ A modern, desktop-grade web application designed to help researchers search lite
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Setup & Execution Instructions](#setup--execution-instructions)
+- [Testing & Quality Assurance](#testing--quality-assurance)
 - [Major Features](#major-features)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Project Structure](#project-structure)
@@ -60,6 +61,77 @@ npm run build
 # Start the production server
 npm start
 ```
+
+---
+
+## Testing & Quality Assurance
+
+The project features a comprehensive automated testing framework built with **Vitest**, **React Testing Library**, **JSDOM**, and **V8 coverage instrumentation**. The test suite spans 10 test files with 104 tests covering the SQLite database repository, Next.js 16 App Router API routes, binary PDF extraction and serving, academic search orchestration, resilience fallbacks, boundary conditions, and React 19 UI components.
+
+### Running Tests
+
+```bash
+# Run all tests once
+npm test
+
+# Run tests with terminal V8 code coverage report
+npm run test:coverage
+
+# Run tests in continuous interactive watch mode
+npm run test:watch
+```
+
+#### Running Targeted Test Suites
+
+```bash
+# Database repository & CRUD operations
+npx vitest run tests/db/libraryRepo.test.ts
+
+# SQL injection, extreme Unicode & pagination boundary stress tests
+npx vitest run tests/db/boundariesAndFaults.test.ts
+
+# API route handlers (/api/search, /api/library, /api/upload, /api/ai/*)
+npx vitest run tests/api/apiRoutes.test.ts
+
+# Static PDF binary streaming & path-traversal isolation (/api/uploads/[filename])
+npx vitest run tests/api/uploadsStatic.test.ts
+
+# Network boundaries, OpenAlex/arXiv fallbacks & preprint cross-matching
+npx vitest run tests/lib/networkFallbacks.test.ts
+
+# PDF heuristic text & metadata extraction
+npx vitest run tests/lib/pdfExtractor.test.ts
+
+# arXiv API query builder & Atom XML parsing
+npx vitest run tests/lib/arxiv.test.ts
+
+# Academic search orchestrator & abstract recovery
+npx vitest run tests/lib/search.test.ts
+
+# AI Gemini integration & paper content resolution
+npx vitest run tests/lib/aiModules.test.ts
+
+# React 19 UI components (SearchBar, FilterBar, PaperCard)
+npx vitest run tests/components/components.test.tsx
+```
+
+### Expected Test Results & Confirmed Application Bugs
+
+When running `npm test` or `npm run test:coverage`, **102 out of 104 tests pass** (98.1% pass rate). There are **2 expected test failures** that document confirmed, reproducible application bugs in production source code (intentionally preserved per testing rules prohibiting modifications to `src/`):
+
+1. **Pre-1950 Publication Year Extraction Bug** (`tests/lib/pdfExtractor.test.ts`):
+   - **File & Lines**: `src/lib/pdfExtractor.ts` (lines 212 & 222)
+   - **Test Case**: `should fallback to clean author in PDF metadata dictionary when text lines lack authors`
+   - **Root Cause**: The publication year heuristic applies `if (parsed >= 1950 && parsed <= year + 1)`. Seminal historical papers published prior to 1950 (such as Claude Shannon's landmark 1948 paper *"A Mathematical Theory of Communication"*) fail this check and silently default to the current year (`2026`).
+   - **Status**: The test asserts the true expected year (`1948`) and fails, documenting this heuristic bug for future remediation.
+
+2. **Unhandled OpenAlex 5xx Network Error & Missing arXiv Fallback** (`tests/lib/networkFallbacks.test.ts`):
+   - **File & Lines**: `src/lib/search.ts` (lines 478–485)
+   - **Test Case**: `should automatically fall back to arXiv search when OpenAlex returns 5xx or network error`
+   - **Root Cause**: In `searchPapers`, when `provider === "arxiv"`, an explicit `try/catch` catches arXiv failures and degrades to OpenAlex. However, under default `provider === "all"`, `Promise.all([searchOpenAlex(params), searchCrossrefExactTitle(...)])` is executed without a `try/catch` block. When OpenAlex returns HTTP 500 or experiences downtime, `searchOpenAlex` throws an uncaught exception rather than degrading gracefully to arXiv search.
+   - **Status**: The test asserts the expected fallback behavior (`providerUsed` containing `arxiv`) and fails, documenting this resilience gap for future remediation.
+
+For full test activity logs, V8 coverage breakdowns, and comparative evaluations across all testing stages, see [`TESTING_LOG.md`](./TESTING_LOG.md).
 
 ---
 
