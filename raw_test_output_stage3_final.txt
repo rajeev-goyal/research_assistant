@@ -1,0 +1,127 @@
+> ai-research-assistant@0.1.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v5.1.0 /Users/rajeevgoyal/Codes/ASE
+      Coverage enabled with v8
+
+ ✓ tests/api/uploadsStatic.test.ts (4 tests) 11ms
+ ✓ tests/lib/arxiv.test.ts (4 tests) 20ms
+ ❯ tests/lib/pdfExtractor.test.ts (8 tests | 1 failed) 24ms
+   ❯ PDF Text Extractor & Heuristics - extractMetadataFromPdf (8)
+     ✓ should extract title, authors, year, and abstract from standard academic paper text 8ms
+     ✓ should filter messy conference header noise, copyright notices, and institutional email blocks 5ms
+     ✓ should handle spaced OCR character artifacts in abstract heading (A B S T R A C T) 1ms
+     × should fallback to clean author in PDF metadata dictionary when text lines lack authors 8ms
+     ✓ should reject software/generic author in PDF info dictionary and fall back to Unknown Author 1ms
+     ✓ should detect publication year from raw text copyright notice when CreationDate is absent 0ms
+     ✓ should fallback to sanitized filename when PDF title is generic or missing 0ms
+     ✓ should fallback when abstract is not detected in the document 0ms
+ ❯ tests/lib/networkFallbacks.test.ts (12 tests | 1 failed) 25ms
+   ❯ Network Boundaries, Fallback Logic & Resilience (12)
+     ❯ searchPapers Fallback & Degradation (2)
+       ✓ should fall back to OpenAlex when provider is 'arxiv' and arXiv API returns HTTP 5xx or fails 10ms
+       × should automatically fall back to arXiv search when OpenAlex returns 5xx or network error 10ms
+     ❯ paperContentResolver - Remote PDF Downloading & Extraction (4)
+       ✓ should download remote open-access PDF via pdfUrl and extract full text 1ms
+       ✓ should resolve direct arXiv PDF stream when paper id has 'arxiv:' prefix and no pdfUrl 0ms
+       ✓ should handle HTML landing pages by extracting citation_pdf_url meta tag and downloading target PDF 1ms
+       ✓ should fall back to abstract when remote PDF fetch aborts or returns non-PDF content 1ms
+     ❯ paperContentResolver - arXiv Preprint Cross-Matching (3)
+       ✓ should cross-match arXiv preprint by title when direct PDF links are absent and persist discovered link if paper is saved 1ms
+       ✓ should reject candidate preprint if title similarity is too weak 0ms
+       ✓ should return null immediately for empty or overly short titles (<8 characters) 0ms
+     ❯ fetchFallbackAbstract - Europe PMC & Semantic Scholar (3)
+       ✓ should resolve missing abstract from Europe PMC using PMID when DOI is absent 0ms
+       ✓ should fall back to Semantic Scholar via DOI when Europe PMC returns no abstract 0ms
+       ✓ should return empty string if both Europe PMC and Semantic Scholar return abstracts shorter than 40 characters 0ms
+ ✓ tests/db/libraryRepo.test.ts (14 tests) 53ms
+ ✓ tests/db/boundariesAndFaults.test.ts (10 tests) 31ms
+ ✓ tests/lib/search.test.ts (10 tests) 11ms
+ ✓ tests/api/apiRoutes.test.ts (20 tests) 17ms
+ ✓ tests/components/components.test.tsx (13 tests) 115ms
+ ✓ tests/lib/aiModules.test.ts (9 tests) 180ms
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/lib/networkFallbacks.test.ts > Network Boundaries, Fallback Logic & Resilience > searchPapers Fallback & Degradation > should automatically fall back to arXiv search when OpenAlex returns 5xx or network error
+Error: OpenAlex API responded with status 500
+ ❯ searchOpenAlex src/lib/search.ts:328:11
+    326| 
+    327|   if (!response.ok) {
+    328|     throw new Error(`OpenAlex API responded with status ${response.status}`);
+       |           ^
+    329|   }
+    330| 
+ ❯ src/lib/search.ts:480:7
+ ❯ searchPapers src/lib/search.ts:479:33
+ ❯ tests/lib/networkFallbacks.test.ts:149:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/lib/pdfExtractor.test.ts > PDF Text Extractor & Heuristics - extractMetadataFromPdf > should fallback to clean author in PDF metadata dictionary when text lines lack authors
+AssertionError: expected 2026 to be 1948 // Object.is equality
+
+- Expected
++ Received
+
+- 1948
++ 2026
+
+ ❯ tests/lib/pdfExtractor.test.ts:168:25
+    166|     // Seminal historical papers published prior to 1950 (such as Claude Shannon's 1948 paper)
+    167|     // fail this lower bound check and erroneously fall back to the current year (2026).
+    168|     expect(result.year).toBe(1948);
+       |                         ^
+    169|   });
+    170|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  2 failed | 8 passed (10)
+      Tests  2 failed | 102 passed (104)
+   Start at  22:28:14
+   Duration  2.77s (environment 75%, setup 12%, tests 5%, import 4%, worker 2%, transform 2%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   43.77 |    42.29 |   37.65 |   44.72 |                   
+ app               |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |      100 |       0 |       0 | 4-14              
+  page.tsx         |       0 |        0 |       0 |       0 | 1-752             
+ app/api/ai/chat   |   26.53 |    30.43 |      40 |   27.08 |                   
+  route.ts         |   26.53 |    30.43 |      40 |   27.08 | ...2,30,45,52-173 
+ app/api/ai/status |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ ...i/ai/summarize |   33.33 |    27.27 |   66.66 |   33.33 |                   
+  route.ts         |   33.33 |    27.27 |   66.66 |   33.33 | 15-16,27,42-154   
+ app/api/library   |   83.87 |    70.83 |     100 |   83.33 |                   
+  route.ts         |   83.87 |    70.83 |     100 |   83.33 | 10-11,32,75-76    
+ app/api/search    |     100 |    93.75 |     100 |     100 |                   
+  route.ts         |     100 |    93.75 |     100 |     100 | 45                
+ app/api/upload    |   77.77 |    83.33 |     100 |   77.77 |                   
+  route.ts         |   77.77 |    83.33 |     100 |   77.77 | 40,55-79          
+ ...ads/[filename] |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ components        |   10.75 |    14.35 |    19.1 |   11.47 |                   
+  ApiKeyModal.tsx  |       0 |        0 |       0 |       0 | 1-104             
+  FilterBar.tsx    |   71.42 |    77.77 |      60 |   71.42 | 66-84             
+  PaperCard.tsx    |    92.3 |    71.18 |      75 |   95.83 | 210               
+  SearchBar.tsx    |     100 |       80 |     100 |     100 | 35,74             
+  ...hSkeleton.tsx |       0 |      100 |       0 |       0 | 1-10              
+  SummaryModal.tsx |       0 |        0 |       0 |       0 | 1-780             
+  UploadModal.tsx  |       0 |        0 |       0 |       0 | 1-232             
+ lib               |   80.36 |    66.78 |      76 |   82.33 |                   
+  arxiv.ts         |   95.83 |    74.13 |     100 |   95.58 | 94,145,151        
+  ...ntResolver.ts |   90.51 |    72.56 |   66.66 |    95.2 | 32-34,140,150,298 
+  pdfExtractor.ts  |   96.03 |    91.77 |     100 |   98.27 | 245-246           
+  search.ts        |      60 |    47.05 |      64 |   61.16 | ...72,489-497,511 
+ lib/ai            |   11.11 |    17.18 |      50 |   12.04 |                   
+  geminiClient.ts  |   11.11 |    17.18 |      50 |   12.04 | 22-29,78-264      
+ lib/db            |   76.85 |    75.96 |    91.3 |   76.28 |                   
+  index.ts         |   15.38 |        0 |       0 |      16 | 13-52             
+  libraryRepo.ts   |   96.29 |    85.86 |     100 |   97.18 | 183-184           
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
